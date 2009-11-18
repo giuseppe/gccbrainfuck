@@ -1,0 +1,9 @@
+language="brainfuck"
+
+compilers="bf1obj\$(exeext)"
+
+target_libs="target-libbrainfuck"
+
+lang_requires="c"
+
+gtfiles="\$(srcdir)/brainfuck/brainfuck-lang.c"

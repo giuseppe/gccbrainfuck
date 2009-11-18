@@ -1,0 +1,87 @@
+.PHONY: brainfuck
+
+brainfuck: bf1$(exeext)
+
+
+# Use maximal warnings for this front end.
+brainfuck-warn = $(STRICT_WARN)
+
+BRAINFUCK_OBJS = brainfuck/brainfuck-lang.o attribs.o
+
+brainfuck_OBJS = $(BRAINFUCK_OBJS)
+
+bf1$(exeext): $(BRAINFUCK_OBJS) attribs.o $(BACKEND) $(LIBDEPS)
+	      $(CC) $(ALL_CFLAGS) -o $@ \
+	      $(BRAINFUCK_OBJS) $(BACKEND) $(LIBS) $(BACKENDLIBS)
+
+
+brainfuck/tfspec.o: $(srcdir)/brainfuck/tfspec.c $(SYSTEM_H) coretypes.h $(TM_H) $(GCC_H) $(CONFIG_H) $(TREE_H)
+
+brainfuck/brainfuck-lang.o: brainfuck/brainfuck-lang.c $(GO_SYSTEM_H) coretypes.h opts.h $(TREE_H) \
+	$(GIMPLE_H) $(GGC_H) toplev.h debug.h options.h $(FLAGS_H) convert.h \
+	langhooks.h langhooks-def.h $(TARGET_H) $(DIAGNOSTIC_H) $(GO_C_H) \
+	gt-brainfuck-brainfuck-lang.h gtype-brainfuck.h
+
+brainfuck.srcextra:
+
+# Build hooks:
+
+brainfuck.all.cross:
+brainfuck.start.encap:
+brainfuck.rest.encap:
+brainfuck.info:
+brainfuck.install-info:
+brainfuck.dvi:
+brainfuck.pdf:
+brainfuck.install-pdf:
+brainfuck.html:
+brainfuck.man:
+brainfuck.srcinfo:
+brainfuck.srcman:
+brainfuck.install-plugin:
+
+brainfuck.tags: force
+	cd $(srcdir)/brainfuck; etags -o TAGS.sub *.c *.h; \
+	etags --include TAGS.sub --include ../TAGS.sub
+
+lang_checks += check-brainfuck
+
+#
+# Install hooks:
+# bf1obj is installed elsewhere as part of $(COMPILERS).
+
+brainfuck.install-common:
+
+brainfuck.install-man:
+
+brainfuck.uninstall:
+#
+# Clean hooks:
+# A lot of the ancillary files are deleted by the main makefile.
+# We just have to delete files specific to us.
+brainfuck.mostlyclean:
+	-rm -f brainfuck/*$(objext) brainfuck/xforward brainfuck/fflags
+	-rm -f brainfuck/*$(coverageexts)
+brainfuck.clean: brainfuck.mostlyclean
+	-rm -rf brainfuck-headers
+brainfuck.distclean:
+	-rm -f brainfuck/Makefile brainfuck/Make-host brainfuck/Make-target
+	-rm -f brainfuck/config.status brainfuck/config.cache
+brainfuck.maintainer-clean:
+
+#
+# Stage hooks:
+
+brainfuck.stage1: stage1-start
+	-mv brainfuck/*$(objext) stage1/brainfuck
+brainfuck.stage2: stage2-start
+	-mv brainfuck/*$(objext) stage2/brainfuck
+brainfuck.stage3: stage3-start
+	-mv brainfuck/*$(objext) stage3/brainfuck
+brainfuck.stage4: stage4-start
+	-mv brainfuck/*$(objext) stage4/brainfuck
+brainfuck.stageprofile: stageprofile-start
+	-mv brainfuck/*$(objext) stageprofile/brainfuck
+brainfuck.stagefeedback: stagefeedback-start
+	-mv brainfuck/*$(objext) stagefeedback/brainfuck
+
