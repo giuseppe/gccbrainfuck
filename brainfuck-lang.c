@@ -256,7 +256,8 @@ brainfuck_langhook_parse_file (int set_yy_debug ATTRIBUTE_UNUSED)
 
   append_to_statement_list (assign, &func);
 
-  finput = fopen (main_input_filename, "r");
+  finput = main_input_filename ?
+    fopen (main_input_filename, "r") : stdin;
 
   append_to_statement_list (read_tree (finput, header, deref), &func);
 
@@ -282,7 +283,8 @@ brainfuck_langhook_parse_file (int set_yy_debug ATTRIBUTE_UNUSED)
   gimplify_function_tree (decl);
   cgraph_finalize_function (decl, true);
 
-  fclose (finput);
+  if (finput != stdin)
+    fclose (finput);
 
   cgraph_finalize_compilation_unit ();
 }

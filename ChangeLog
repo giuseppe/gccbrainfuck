@@ -1,0 +1,13 @@
+2011-02-23  Jose E. Marchesi  <jemarch@gnu.org>
+
+	* brainfuck-lang.c (brainfuck_langhook_parse_file): Avoid a
+	segmentation fault when bf1 is reading the program from stdin.
+
+2009-11-19 10:30  Giuseppe Scrivano <gscrivano@gnu.org>
+
+	* COPYING: New file.
+
+2009-11-18 17:43  Giuseppe Scrivano <gscrivano@gnu.org>
+
+	* AUTHORS, Make-lang.in, README, bfspec.c, brainfuck-lang.c,
+	  config-lang.in, lang-specs.h, lang.opt: New files.
