@@ -60,11 +60,12 @@ int brainfuck_gimplify_expr (tree *expr_p ATTRIBUTE_UNUSED,
 #undef LANG_HOOKS_WRITE_GLOBALS
 #undef LANG_HOOKS_GIMPLIFY_EXPR
 #undef LANG_HOOKS_DECL_PRINTABLE_NAME
+#undef LANG_HOOKS_OPTION_LANG_MASK
 
-#define LANG_HOOKS_NAME "GNU brainfuck"
-#define LANG_HOOKS_INIT brainfuck_init
-#define LANG_HOOKS_DECL_PRINTABLE_NAME brainfuck_printable_name
-#define LANG_HOOKS_GIMPLIFY_EXPR brainfuck_gimplify_expr
+#define LANG_HOOKS_NAME                 "GNU brainfuck"
+#define LANG_HOOKS_INIT                 brainfuck_init
+#define LANG_HOOKS_DECL_PRINTABLE_NAME  brainfuck_printable_name
+#define LANG_HOOKS_GIMPLIFY_EXPR        brainfuck_gimplify_expr
 #define LANG_HOOKS_GETDECLS		brainfuck_langhook_getdecls
 #define LANG_HOOKS_BUILTIN_FUNCTION	brainfuck_langhook_builtin_function
 #define LANG_HOOKS_TYPE_FOR_MODE        brainfuck_langhook_type_for_mode
@@ -77,6 +78,7 @@ int brainfuck_gimplify_expr (tree *expr_p ATTRIBUTE_UNUSED,
 #define LANG_HOOKS_POST_OPTIONS		brainfuck_langhook_post_options
 #define LANG_HOOKS_PARSE_FILE		brainfuck_langhook_parse_file
 #define LANG_HOOKS_WRITE_GLOBALS	brainfuck_langhook_write_globals
+#define LANG_HOOKS_OPTION_LANG_MASK	brainfuck_langhook_option_lang_mask
 
 
 static bool
@@ -84,36 +86,30 @@ brainfuck_init (void)
 {
   build_common_tree_nodes (false, false);
 
-  /* The sizetype may be "unsigned long" or "unsigned long long".  */
-  if (TYPE_MODE (long_unsigned_type_node) == ptr_mode)
-    size_type_node = long_unsigned_type_node;
-  else if (TYPE_MODE (long_long_unsigned_type_node) == ptr_mode)
-    size_type_node = long_long_unsigned_type_node;
-  else
-    size_type_node = long_unsigned_type_node;
-  set_sizetype (size_type_node);
-
-  build_common_tree_nodes_2 (0);
-  build_common_builtin_nodes ();
-
   void_list_node = build_tree_list (NULL_TREE, void_type_node);
+  build_common_builtin_nodes ();
 
   return true;
 }
 
+
 static unsigned int
-brainfuck_langhook_init_options (unsigned int argc ATTRIBUTE_UNUSED,
-                                 const char** argv ATTRIBUTE_UNUSED)
+brainfuck_langhook_option_lang_mask (void)
 {
   return CL_Brainfuck;
 }
 
-static int
-brainfuck_langhook_handle_option (size_t scode ATTRIBUTE_UNUSED,
-                                  const char *arg ATTRIBUTE_UNUSED,
-                                  int value ATTRIBUTE_UNUSED)
+static void
+brainfuck_langhook_init_options (unsigned int argc ATTRIBUTE_UNUSED,
+                                 cl_decoded_option* argv ATTRIBUTE_UNUSED)
 {
-  return 0;
+}
+
+static bool brainfuck_langhook_handle_option (unsigned int a ATTRIBUTE_UNUSED, const char *b ATTRIBUTE_UNUSED,
+                                              int c ATTRIBUTE_UNUSED, int d ATTRIBUTE_UNUSED, unsigned int e ATTRIBUTE_UNUSED,
+                                              const cl_option_handlers* handler ATTRIBUTE_UNUSED)
+{
+  return false;
 }
 
 static bool
@@ -211,14 +207,11 @@ read_tree (FILE *finput, tree header, tree deref)
 
         case '[':
           child = read_tree (finput, header, deref);
-          exit = build1 (EXIT_EXPR, char_type_node, 
-                         build3 (COND_EXPR, char_type_node,
-                                 deref,
-                                 build_int_cst (char_type_node, 0),
-                                 build_int_cst (char_type_node, 1)));
+          exit = build1 (EXIT_EXPR, char_type_node,
+                         build2 (EQ_EXPR, char_type_node, deref,
+                                 build_int_cst (char_type_node, 0)));
 
-          body = build2 (COMPOUND_EXPR, char_type_node, 
-                         exit, child);
+          body = build2 (COMPOUND_EXPR, char_type_node, exit, child);
           append_to_statement_list (build1 (LOOP_EXPR, char_type_node, body),
                                     &func);
           break;
@@ -237,7 +230,7 @@ read_tree (FILE *finput, tree header, tree deref)
 }
 
 static void
-brainfuck_langhook_parse_file (int set_yy_debug ATTRIBUTE_UNUSED)
+brainfuck_langhook_parse_file ()
 {
   FILE *finput = NULL;
   tree func = NULL_TREE;
@@ -254,6 +247,8 @@ brainfuck_langhook_parse_file (int set_yy_debug ATTRIBUTE_UNUSED)
                         fold_build1 (ADDR_EXPR, build_pointer_type (char_type_node),
                                      data));
 
+  append_to_statement_list (data, &func);
+  append_to_statement_list (header, &func);
   append_to_statement_list (assign, &func);
 
   finput = main_input_filename ?
@@ -261,8 +256,11 @@ brainfuck_langhook_parse_file (int set_yy_debug ATTRIBUTE_UNUSED)
 
   append_to_statement_list (read_tree (finput, header, deref), &func);
 
-  varpool_finalize_decl (header);
-  varpool_finalize_decl (data);
+  TREE_STATIC(header) = 1;
+  TREE_STATIC(data) = 1;
+
+  wrapup_global_declarations (&header, 1);
+  wrapup_global_declarations (&data, 1);
 
   DECL_ARTIFICIAL (decl) = 1;
   DECL_RESULT (decl) =  build_decl (input_location, RESULT_DECL, NULL_TREE,
@@ -271,8 +269,6 @@ brainfuck_langhook_parse_file (int set_yy_debug ATTRIBUTE_UNUSED)
   TREE_USED (decl) = 1;
   DECL_SAVED_TREE (decl) = func;
   DECL_UNINLINABLE (decl) = 1;
-  TREE_STATIC (header) = 1; 
-  TREE_STATIC (data) = 1; 
 
   DECL_INITIAL (decl) = make_node (BLOCK);
   TREE_USED (DECL_INITIAL (decl)) = 1;
@@ -286,7 +282,7 @@ brainfuck_langhook_parse_file (int set_yy_debug ATTRIBUTE_UNUSED)
   if (finput != stdin)
     fclose (finput);
 
-  cgraph_finalize_compilation_unit ();
+  finalize_compilation_unit ();
 }
 
 static void
@@ -307,10 +303,10 @@ brainfuck_langhook_pushdecl (tree decl ATTRIBUTE_UNUSED)
   gcc_unreachable ();
 }
 
-static int
+static bool
 brainfuck_langhook_global_bindings_p (void)
 {
-  return current_function_decl == NULL ? 1 : 0;
+  return current_function_decl == NULL;
 }
 
 
@@ -372,7 +368,7 @@ brainfuck_langhook_type_for_mode (enum machine_mode mode ATTRIBUTE_UNUSED,
   enum mode_class mc = GET_MODE_CLASS (mode);
   if (mc == MODE_INT)
     return integer_type_node;
-  
+
   return NULL_TREE;
 }
 
@@ -387,7 +383,7 @@ brainfuck_gimplify_expr (tree *expr_p ATTRIBUTE_UNUSED,
                          gimple_seq *pre_p ATTRIBUTE_UNUSED,
                          gimple_seq *post_p ATTRIBUTE_UNUSED)
 {
-  return 0;
+  return GS_UNHANDLED;
 }
 
 const char *

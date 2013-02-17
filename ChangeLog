@@ -1,3 +1,8 @@
+2013-02-16  Giuseppe Scrivano  <gscrivano@gnu.org>
+
+	* brainfuck-lang.c: Work correctly with last GCC version.
+	* Makefile-lang.in: Likewise.
+
 2011-02-23  Jose E. Marchesi  <jemarch@gnu.org>
 
 	* brainfuck-lang.c (brainfuck_langhook_parse_file): Avoid a

@@ -1,3 +1,4 @@
+# Make-lang.in -- Top level -*- makefile -*- fragment for gcc brainfuck.
 .PHONY: brainfuck
 
 brainfuck: bf1$(exeext)
@@ -6,14 +7,19 @@ brainfuck: bf1$(exeext)
 # Use maximal warnings for this front end.
 brainfuck-warn = $(STRICT_WARN)
 
-BRAINFUCK_OBJS = brainfuck/brainfuck-lang.o attribs.o
+BRAINFUCK_OBJS = brainfuck/brainfuck-lang.o
 
-brainfuck_OBJS = $(BRAINFUCK_OBJS)
+brainfuck_OBJS = $(GCC_OBJS) $(BRAINFUCK_OBJS)
 
 bf1$(exeext): $(BRAINFUCK_OBJS) attribs.o $(BACKEND) $(LIBDEPS)
-	      $(CC) $(ALL_CFLAGS) -o $@ \
-	      $(BRAINFUCK_OBJS) $(BACKEND) $(LIBS) $(BACKENDLIBS)
+	+$(CXX) $(ALL_CXXFLAGS) $(LDFLAGS) -o $@ \
+	      $(BRAINFUCK_OBJS) attribs.o $(BACKEND) $(LIBS) $(BACKENDLIBS)
 
+brainfuck/tfspec.o: $(srcdir)/brainfuck/tfspec.c $(SYSTEM_H) coretypes.h $(TM_H) $(GCC_H) \
+    $(CONFIG_H) opts.h
+	(SHLIB='$(SHLIB)'; \
+	$(COMPILER) -c $(ALL_COMPILERFLAGS) $(ALL_CPPFLAGS) $(DRIVER_DEFINES) \
+		$(INCLUDES) $(srcdir)/brainfuck/tfspec.c)
 
 brainfuck/tfspec.o: $(srcdir)/brainfuck/tfspec.c $(SYSTEM_H) coretypes.h $(TM_H) $(GCC_H) $(CONFIG_H) $(TREE_H)
 
