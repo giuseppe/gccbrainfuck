@@ -1,5 +1,10 @@
 2016-05-03  Giuseppe Scrivano  <gscrivano@gnu.org>
 
+	* README: Rename to...
+	* README.md: ...this and add more information.
+
+2016-05-03  Giuseppe Scrivano  <gscrivano@gnu.org>
+
 	* Make-lang.in: Adapt to new GCC version.
 	* brainfuck-lang.c: Likewise.
 	* config-lang.in:
