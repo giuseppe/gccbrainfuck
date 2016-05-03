@@ -25,7 +25,7 @@
 #include "opts.h"
 #include "tree.h"
 #include "tree-iterator.h"
-#include "gimple.h"
+#include "gimplify.h"
 #include "ggc.h"
 #include "toplev.h"
 #include "debug.h"
@@ -37,6 +37,9 @@
 #include "langhooks-def.h"
 #include "target.h"
 #include "cgraph.h"
+#include "stringpool.h"
+#include "fold-const.h"
+#include "function.h"
 
 void finish_file (void);
 const char * brainfuck_printable_name (tree decl ATTRIBUTE_UNUSED,
@@ -84,7 +87,7 @@ int brainfuck_gimplify_expr (tree *expr_p ATTRIBUTE_UNUSED,
 static bool
 brainfuck_init (void)
 {
-  build_common_tree_nodes (false, false);
+  build_common_tree_nodes (false);
 
   void_list_node = build_tree_list (NULL_TREE, void_type_node);
   build_common_builtin_nodes ();
@@ -92,6 +95,13 @@ brainfuck_init (void)
   return true;
 }
 
+static GTY(()) tree gc_root;
+
+static void
+preserve_from_gc (tree t)
+{
+  gc_root = tree_cons (NULL_TREE, t, gc_root);
+}
 
 static unsigned int
 brainfuck_langhook_option_lang_mask (void)
@@ -105,7 +115,7 @@ brainfuck_langhook_init_options (unsigned int argc ATTRIBUTE_UNUSED,
 {
 }
 
-static bool brainfuck_langhook_handle_option (unsigned int a ATTRIBUTE_UNUSED, const char *b ATTRIBUTE_UNUSED,
+static bool brainfuck_langhook_handle_option (size_t a ATTRIBUTE_UNUSED, const char *b ATTRIBUTE_UNUSED,
                                               int c ATTRIBUTE_UNUSED, int d ATTRIBUTE_UNUSED, unsigned int e ATTRIBUTE_UNUSED,
                                               const cl_option_handlers* handler ATTRIBUTE_UNUSED)
 {
@@ -174,35 +184,47 @@ read_tree (FILE *finput, tree header, tree deref)
 {
   char input;
   tree child;
-  tree func = NULL_TREE;
+  tree func = alloc_stmt_list ();
   tree exit, body = NULL_TREE;
-
+  tree expr;
   while (fread (&input, 1, 1, finput))
     {
       switch (input)
         {
         case '>':
-          append_to_statement_list (add_ptr (header, 1), &func);
+	  expr = add_ptr (header, 1);
+	  preserve_from_gc (expr);
+          append_to_statement_list (expr, &func);
           break;
 
         case '<':
-          append_to_statement_list (add_ptr (header, -1), &func);
+	  expr = add_ptr (header, -1);
+	  preserve_from_gc (expr);
+          append_to_statement_list (expr, &func);
           break;
 
         case '+':
-          append_to_statement_list (add (deref, 1), &func);
+	  expr = add (deref, 1);
+	  preserve_from_gc (expr);
+          append_to_statement_list (expr, &func);
           break;
 
         case '-':
-          append_to_statement_list (add (deref, -1), &func);
+	  expr = add (deref, -1);
+	  preserve_from_gc (expr);
+          append_to_statement_list (expr, &func);
           break;
 
         case '.':
-          append_to_statement_list (out (deref), &func);
+	  expr = out (deref);
+	  preserve_from_gc (expr);
+          append_to_statement_list (expr, &func);
           break;
 
         case ',':
-          append_to_statement_list (in (deref), &func);
+	  expr = in (deref);
+	  preserve_from_gc (expr);
+          append_to_statement_list (expr, &func);
           break;
 
         case '[':
@@ -212,6 +234,7 @@ read_tree (FILE *finput, tree header, tree deref)
                                  build_int_cst (char_type_node, 0)));
 
           body = build2 (COMPOUND_EXPR, char_type_node, exit, child);
+	  preserve_from_gc (body);
           append_to_statement_list (build1 (LOOP_EXPR, char_type_node, body),
                                     &func);
           break;
@@ -233,7 +256,7 @@ static void
 brainfuck_langhook_parse_file ()
 {
   FILE *finput = NULL;
-  tree func = NULL_TREE;
+  tree func = alloc_stmt_list ();
   tree decl = build_decl (input_location, FUNCTION_DECL,
                           get_identifier ("main"),
                           build_function_type (integer_type_node,
@@ -277,18 +300,12 @@ brainfuck_langhook_parse_file ()
 
   current_function_decl = decl;
   gimplify_function_tree (decl);
-  cgraph_finalize_function (decl, true);
+  cgraph_node::finalize_function (decl, true);
 
   if (finput != stdin)
     fclose (finput);
 
-  finalize_compilation_unit ();
-}
-
-static void
-brainfuck_langhook_write_globals (void)
-{
-
+  global_decl_processing ();
 }
 
 tree
@@ -328,7 +345,7 @@ struct GTY(()) lang_identifier
 
 
 union GTY((desc ("TREE_CODE (&%h.generic) == IDENTIFIER_NODE"),
-	   chain_next ("(union lang_tree_node *) TREE_CHAIN (&%h.generic)")))
+	   chain_next ("CODE_CONTAINS_STRUCT (TREE_CODE (&%h.generic), TS_COMMON) ? ((union lang_tree_node *) TREE_CHAIN (&%h.generic)) : NULL")))
 lang_tree_node
 {
   union tree_node GTY((tag ("0"),
@@ -343,10 +360,21 @@ struct GTY(()) language_function
 };
 
 static tree
-brainfuck_langhook_type_for_size (unsigned int bits ATTRIBUTE_UNUSED,
+brainfuck_langhook_type_for_size (unsigned int bits,
                                   int unsignedp ATTRIBUTE_UNUSED)
 {
-  return integer_type_node;
+  tree type;
+  if (bits == INT_TYPE_SIZE)
+    type = integer_type_node;
+  else if (bits == CHAR_TYPE_SIZE)
+    type = signed_char_type_node;
+  else if (bits == SHORT_TYPE_SIZE)
+    type = short_integer_type_node;
+  else if (bits == LONG_TYPE_SIZE)
+    type = long_integer_type_node;
+  else
+    type = long_long_integer_type_node;
+  return type;
 }
 
 static tree
@@ -367,7 +395,7 @@ brainfuck_langhook_type_for_mode (enum machine_mode mode ATTRIBUTE_UNUSED,
 {
   enum mode_class mc = GET_MODE_CLASS (mode);
   if (mc == MODE_INT)
-    return integer_type_node;
+    return long_unsigned_type_node;
 
   return NULL_TREE;
 }

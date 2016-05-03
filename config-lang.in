@@ -1,6 +1,6 @@
 language="brainfuck"
 
-compilers="bf1obj\$(exeext)"
+compilers="bf1\$(exeext)"
 
 target_libs="target-libbrainfuck"
 

@@ -1,3 +1,10 @@
+2016-05-03  Giuseppe Scrivano  <gscrivano@gnu.org>
+
+	* Make-lang.in: Adapt to new GCC version.
+	* brainfuck-lang.c: Likewise.
+	* config-lang.in:
+	*lang-specs.h: Likewise
+
 2013-02-16  Giuseppe Scrivano  <gscrivano@gnu.org>
 
 	* brainfuck-lang.c: Work correctly with last GCC version.
