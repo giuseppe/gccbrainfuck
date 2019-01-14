@@ -116,8 +116,8 @@ brainfuck_langhook_init_options (unsigned int argc ATTRIBUTE_UNUSED,
 }
 
 static bool brainfuck_langhook_handle_option (size_t a ATTRIBUTE_UNUSED, const char *b ATTRIBUTE_UNUSED,
-                                              int c ATTRIBUTE_UNUSED, int d ATTRIBUTE_UNUSED, unsigned int e ATTRIBUTE_UNUSED,
-                                              const cl_option_handlers* handler ATTRIBUTE_UNUSED)
+                                              HOST_WIDE_INT c ATTRIBUTE_UNUSED, int d ATTRIBUTE_UNUSED,
+                                              location_t e ATTRIBUTE_UNUSED, const cl_option_handlers* f ATTRIBUTE_UNUSED)
 {
   return false;
 }
