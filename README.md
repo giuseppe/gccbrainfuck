@@ -9,7 +9,7 @@ addition to the Brainfuck frontend specific files:
 
 ```
 $ git clone https://github.com/giuseppe/gccbrainfuck.git
-$ git clone git://gcc.gnu.org/git/gcc.git
+$ git clone --depth 1 git://gcc.gnu.org/git/gcc.git
 $ ln -s $(pwd)/gccbrainfuck gcc/gcc/brainfuck
 ```
 
@@ -23,7 +23,7 @@ you are waiting for it.
 ```
 $ mkdir gcc/build
 $ cd gcc/build
-$ ../configure --enable-languages=brainfuck
+$ ../configure --enable-languages=brainfuck --disable-multilib
 $ make -j $(nproc)
 ```
 
