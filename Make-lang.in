@@ -32,6 +32,9 @@ brainfuck/brainfuck-lang.o: brainfuck/brainfuck-lang.c $(GO_SYSTEM_H) coretypes.
 
 brainfuck.srcextra:
 
+# No brainfuck-specific selftests
+selftest-brainfuck:
+
 # Build hooks:
 
 brainfuck.all.cross:
